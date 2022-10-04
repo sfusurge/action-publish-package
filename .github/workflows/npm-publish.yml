@@ -1,0 +1,92 @@
+name: NPM Package
+on:
+  workflow_call:
+    inputs:
+      workflow-ref:
+        required: true
+        type: string
+        description: "The workflow ref."
+      package:
+        required: true
+        type: string
+        description: "The path to the package within the local repo."
+      publish-gpr:
+        required: false
+        default: false
+        type: boolean
+        description: "Should the package be published to the GitHub Package Registry?"
+      replace-version:
+        required: false
+        type: string
+        description: "If provided, the package version will be overwritten."
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    name: "Test"
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup NodeJS
+        uses: actions/setup-node@v3
+        with:
+          registry-url: 'https://npm.pkg.github.com'
+          scope: 'sfusurge'
+
+      - name: Install Dependencies
+        run: |
+          cd "${{ inputs.package }}"
+          npm ci
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run Tests
+        run: |
+          cd "${{ inputs.package }}"
+          npm test
+
+  publish-gpr:
+    runs-on: ubuntu-latest
+    needs: test
+    name: "Publish to GitHub Packages"
+    if: ${{ inputs.publish-gpr }}
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Checkout Helpers
+        uses: actions/checkout@v3
+        with:
+          repository: 'sfusurge/actions-workflows'
+          ref: "${{ inputs.workflow-ref }}"
+          path: ".surge-workflows"
+
+      - name: Setup NodeJS
+        uses: actions/setup-node@v3
+        with:
+          registry-url: 'https://npm.pkg.github.com'
+          scope: 'sfusurge'
+
+      - uses: ./.surge-workflows/.github/actions/npm-rewrite-package-version
+        if: ${{ inputs.replace-version != '' }}
+        with:
+          package: "${{ inputs.package }}"
+          replace-version: "${{ inputs.replace-version }}"
+
+      - name: Publish Package
+        shell: bash
+        run: |
+          cd "${{ inputs.package }}"
+          npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

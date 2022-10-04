@@ -1,0 +1,22 @@
+name: 'Rewrite Package Version'
+description: 'Rewrites the version field of a NPM package'
+
+inputs:
+  package:
+    description: "The directory to the package"
+    required: true
+
+  replace-version:
+    description: 'The version that will be set'
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: 
+      shell: bash
+      if: ${{ inputs.replace-version != '' }}
+      run: |
+        cd "${{ inputs.package }}"
+        jq '.["version"] = ($version | sub("^v(?<version>.*)$"; "\(.version)"))' package.json --arg version '${{ inputs.replace-version }}' > package.json.new
+        mv package.json.new package.json
