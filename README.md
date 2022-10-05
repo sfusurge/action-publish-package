@@ -34,12 +34,13 @@ jobs:
 Publishes a NPM/NodeJS package.
 
 ```yaml
-uses: 'sfusurge/actions-workflows/.github/workflows/<WORKFLOW>.yml@v1'
+uses: 'sfusurge/actions-workflows/.github/workflows/npm-publish.yml@v1'
 with:
     workflow-ref: "v1"
     package: "local/path/to/package"
     publish-gpr: ${{ startsWith(github.ref, 'refs/tags/v') }}
     replace-version: "${{ github.ref_name }}"
+    cache-key: "${{ github.job }}"
 ```
 
 |Input|Default|Description|
@@ -47,3 +48,4 @@ with:
 |`package`|\[required\]|The root directory of the package to publish.|
 |`publish-gpr`|false|Publish the package to the GitHub Package Registry.|
 |`replace-version`|\[none\]|Replaces the version of the package. This is useful for a release-on-tag workflow.|
+|`cache-key`|\[required\]|If provided, NPM depdencies will be cached with this key name.|

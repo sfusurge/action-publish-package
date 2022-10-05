@@ -19,6 +19,10 @@ on:
         required: false
         type: string
         description: "If provided, the package version will be overwritten."
+      cache-key:
+        required: false
+        type: string
+        description: "If provided, a cache with this key will be used."
 
 jobs:
   test:
@@ -34,9 +38,19 @@ jobs:
 
       - name: Setup NodeJS
         uses: actions/setup-node@v3
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Cache Dependencies
+        uses: actions/cache@v3
+        if: ${{ inputs.cache-key != '' }}
         with:
-          registry-url: 'https://npm.pkg.github.com'
-          scope: 'sfusurge'
+          path: ~/.npm
+          key: ${{ runner.os }}-build-${{ inputs.cache-key }}-${{ hashFiles('${{ inputs.package }}/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ inputs.cache-key }}-
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
 
       - name: Install Dependencies
         run: |
@@ -50,6 +64,7 @@ jobs:
           cd "${{ inputs.package }}"
           npm test
 
+  # Publish to GitHub Package Registry
   publish-gpr:
     runs-on: ubuntu-latest
     needs: test
@@ -76,6 +91,17 @@ jobs:
         with:
           registry-url: 'https://npm.pkg.github.com'
           scope: 'sfusurge'
+
+      - name: Cache Dependencies
+        uses: actions/cache@v3
+        if: ${{ inputs.cache-key != '' }}
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-build-${{ inputs.cache-key }}-${{ hashFiles('${{ inputs.package }}/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ inputs.cache-key }}-
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
 
       - uses: ./.surge-workflows/.github/actions/npm-rewrite-package-version
         if: ${{ inputs.replace-version != '' }}
