@@ -1,0 +1,95 @@
+name: Lint Package
+on:
+  workflow_call:
+    inputs:
+      workflow-ref:
+        required: true
+        type: string
+        description: "The workflow ref."
+      package:
+        required: true
+        type: string
+        description: "The path to the package within the local repo."
+      cache-key:
+        required: false
+        type: string
+        description: "If provided, a cache with this key will be used."
+      check-name:
+        required: false
+        type: string
+        default: "Problems"
+        description: "The name to use for the check."
+      fail-on-warning:
+        required: false
+        type: boolean
+        default: true
+        description: "If true, warnings will cause a check fail."
+      fail-is-ok:
+        required: false
+        type: boolean
+        default: false
+        description: "If true, the workflow will still complete if any lints failed."
+      linter:
+        type: string
+        description: "The linter type."
+        default: "eslint"
+
+jobs:
+  run:
+    name: "Lint"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup NodeJS
+        uses: actions/setup-node@v3
+        with:
+          registry-url: 'https://npm.pkg.github.com'
+          scope: 'sfusurge'
+
+      - name: Cache Dependencies
+        uses: actions/cache@v3
+        if: ${{ inputs.cache-key != '' }}
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-build-${{ inputs.cache-key }}-${{ hashFiles('${{ inputs.package }}/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ inputs.cache-key }}-
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
+
+      - name: Install Dependencies
+        run: |
+          cd "${{ inputs.package }}"
+          npm ci
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run Eslint
+        if: ${{ inputs.linter == 'eslint' }}
+        run: |
+          cd "${{ inputs.package }}"
+
+          args=()
+          if "${{ inputs.fail-on-warning }}"; then
+            args+=(--max-warnings=0)
+          fi
+
+          status=0
+          npm run lint -- --output-file=eslint_report.json --format=json "${args[@]}" || status=$?
+          if "${{ inputs.fail-is-ok }}"; then
+            if [ "$status" -eq 2 ]; then exit 2; fi
+          elif [ "$status" -ne 0 ]; then
+            exit 1
+          fi
+
+      - name: Annotate
+        uses: ataylorme/eslint-annotate-action@v2
+        if: ${{ always() && inputs.linter == 'eslint' }}
+        with:
+          repo-token: "${{ secrets.GITHUB_TOKEN }}"
+          report-json: "${{ inputs.package }}/eslint_report.json"
+          fail-on-warning: ${{ inputs.fail-on-warning }}
+          check-name: "${{ inputs.check-name }}"
