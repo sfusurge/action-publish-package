@@ -55,7 +55,11 @@ jobs:
       - name: Install Dependencies
         run: |
           cd "${{ inputs.package }}"
-          npm ci
+          if [ -f "ci-setup.sh" ]; then
+            bash ci-setup.sh
+          else
+            npm ci
+          fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -100,19 +104,23 @@ jobs:
             ${{ runner.os }}-build-
             ${{ runner.os }}-
 
-      - name: Install Dependencies
-        run: |
-          cd "${{ inputs.package }}"
-          npm ci
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Set Package Version
         uses: ./.surge-workflows/.github/actions/npm-rewrite-package-version
         if: ${{ inputs.replace-version != '' }}
         with:
           package: "${{ inputs.package }}"
           replace-version: "${{ inputs.replace-version }}"
+
+      - name: Install Dependencies
+        run: |
+          cd "${{ inputs.package }}"
+          if [ -f "ci-setup.sh" ]; then
+            bash ci-setup.sh
+          else
+            npm ci
+          fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run Build Script
         run: |
