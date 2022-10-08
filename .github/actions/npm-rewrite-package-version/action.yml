@@ -18,5 +18,12 @@ runs:
       if: ${{ inputs.replace-version != '' }}
       run: |
         cd "${{ inputs.package }}"
+
+        if ! grep '^v\{0,1\}\([0-9]\.\)\{0,2\}\([0-9]\)\(-.*\)\{0,1\}' <<< "${{ inputs.replace-version }}" >/dev/null; then
+          printf "Version '%s' is not a valid semver string.\n" '${{ inputs.replace-version }}'
+          printf "Refusing to change it.\n"
+          exit 0
+        fi
+
         jq '.["version"] = ($version | sub("^v(?<version>.*)$"; "\(.version)"))' package.json --arg version '${{ inputs.replace-version }}' > package.json.new
         mv package.json.new package.json
