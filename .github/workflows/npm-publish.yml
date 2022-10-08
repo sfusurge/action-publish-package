@@ -23,6 +23,10 @@ on:
         required: false
         type: string
         description: "If provided, a cache with this key will be used."
+    secrets:
+      NODE_AUTH_TOKEN_GITHUB:
+        description: "The NODE_AUTH_TOKEN to use for downloading packages from GitHub."
+        required: false
 
 jobs:
   test:
@@ -61,7 +65,7 @@ jobs:
             npm ci
           fi
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN_GITHUB || secrets.GITHUB_TOKEN }}
 
       - name: Run Tests
         run: |
@@ -120,7 +124,7 @@ jobs:
             npm ci
           fi
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN_GITHUB || secrets.GITHUB_TOKEN }}
 
       - name: Run Build Script
         run: |

@@ -33,6 +33,11 @@ on:
         type: string
         description: "The linter type."
         default: "eslint"
+    secrets:
+      NODE_AUTH_TOKEN_GITHUB:
+        description: "The NODE_AUTH_TOKEN to use for downloading packages from GitHub."
+        required: false
+
 
 jobs:
   run:
@@ -69,7 +74,7 @@ jobs:
             npm ci
           fi
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN_GITHUB || secrets.GITHUB_TOKEN }}
 
       - name: Run Eslint
         if: ${{ inputs.linter == 'eslint' }}
